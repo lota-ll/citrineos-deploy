@@ -1,0 +1,187 @@
+services:
+# RabbitMQ - Message Broker
+  amqp-broker:
+    image: rabbitmq:3-management
+    container_name: citrine-rabbitmq
+    restart: unless-stopped
+    ports:
+      - "15672:15672"  # Management UI
+      - "5672:5672"    # AMQP
+    environment:
+      RABBITMQ_DEFAULT_USER: 'guest'
+      RABBITMQ_DEFAULT_PASS: 'guest'
+    volumes:
+      - ./data/rabbitmq:/var/lib/rabbitmq
+    healthcheck:
+      test: rabbitmq-diagnostics -q check_port_connectivity
+      interval: 10s
+      timeout: 30s
+      retries: 5
+    networks:
+      - citrine-network
+
+  # PostgreSQL - Database
+  ocpp-db:
+    image: postgis/postgis:16-3.5
+    container_name: citrine-postgres
+    platform: linux/amd64
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgresql/pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: citrine
+      POSTGRES_USER: citrine
+      POSTGRES_PASSWORD: 'citrine'
+    healthcheck:
+      test: 'pg_isready --username=citrine'
+      interval: 5s
+      timeout: 10s
+      retries: 5
+    networks:
+      - citrine-network
+
+  # MinIO - File Storage
+  minio:
+    image: minio/minio
+    container_name: citrine-minio
+    restart: unless-stopped
+    ports:
+      - '9000:9000'
+      - '9001:9001'
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+      MINIO_SERVER_URL: http://localhost:9000
+    volumes:
+      - ./data/minio:/data
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    networks:
+      - citrine-network
+
+  # MinIO Init - Bucket initialization
+  minio-init:
+    image: minio/mc
+    container_name: citrine-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      set -x
+      echo 'Setting up MinIO alias'
+      mc alias set myminio http://minio:9000 minioadmin minioadmin || echo 'FAILED: alias setup'
+      "
+    networks:
+      - citrine-network
+
+  # CitrineOS Core - CSMS Server
+  citrine:
+    image: lotall/citrineos-core:diploma-v1
+    container_name: citrine-core
+    restart: unless-stopped
+    volumes:
+      - ./data:/usr/local/apps/citrineos/Server/data
+    environment:
+      APP_NAME: 'all'
+      APP_ENV: 'docker'
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      DB_STRATEGY: 'migrate'
+      BOOTSTRAP_CITRINEOS_DATABASE_HOST: 'ocpp-db'
+      BOOTSTRAP_CITRINEOS_CONFIG_FILENAME: 'config.json'
+      BOOTSTRAP_CITRINEOS_FILE_ACCESS_TYPE: 'local'
+      BOOTSTRAP_CITRINEOS_FILE_ACCESS_LOCAL_DEFAULT_FILE_PATH: '/data'
+    depends_on:
+      ocpp-db:
+        condition: service_healthy
+      amqp-broker:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"  # REST API
+      - "8081:8081"  # OCPP 2.0.1 WebSocket (Security Profile 0)
+      - "8082:8082"  # OCPP 2.0.1 WebSocket (Security Profile 1)
+      - "8092:8092"  # OCPP 1.6 WebSocket <-- EVerest  
+      - "8443:8443"  # OCPP 2.0.1 TLS (Security Profile 2)
+      - "8444:8444"  # OCPP 2.0.1 mTLS (Security Profile 3)
+      - "9229:9229"  # Debug port
+    healthcheck:
+      test: ['CMD-SHELL', 'node -e "const net = require(\"net\"); const client = net.createConnection(8080, \"127.0.0.1\", () => { client.end(); process.exit(0); }); client.on(\"error\", () => process.exit(1)); client.setTimeout(5000, () => { client.destroy(); process.exit(1); });"']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - citrine-network
+
+  # Hasura GraphQL Engine
+  graphql-engine:
+    image: hasura/graphql-engine:v2.40.3.cli-migrations-v3
+    container_name: citrine-hasura
+    restart: unless-stopped
+    volumes:
+      - ./hasura-metadata:/hasura-metadata
+    ports:
+      - "8090:8080"
+    depends_on:
+      citrine:
+        condition: service_healthy
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://citrine:citrine@ocpp-db:5432/citrine
+      HASURA_GRAPHQL_ENABLE_CONSOLE: 'true'
+      HASURA_GRAPHQL_DEV_MODE: 'true'
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      HASURA_GRAPHQL_ENABLE_TELEMETRY: 'false'
+      HASURA_GRAPHQL_ADMIN_SECRET: CitrineOS!
+      HASURA_GRAPHQL_METADATA_DEFAULTS: '{"backend_configs":{"dataconnector":{"athena":{"uri":"http://data-connector-agent:8081/api/v1/athena"},"mariadb":{"uri":"http://data-connector-agent:8081/api/v1/mariadb"},"mysql8":{"uri":"http://data-connector-agent:8081/api/v1/mysql"},"oracle":{"uri":"http://data-connector-agent:8081/api/v1/oracle"},"snowflake":{"uri":"http://data-connector-agent:8081/api/v1/snowflake"}}}}'
+      HASURA_GRAPHQL_MIGRATIONS_SERVER_TIMEOUT: 60
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://graphql-engine:8080/healthz']
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 30s
+    networks:
+      - citrine-network
+
+  # CitrineOS UI - Operator Interface
+  citrine-ui:
+    build:
+      context: ./citrineos-operator-ui
+      dockerfile: ./Dockerfile
+    container_name: citrine-ui
+    restart: unless-stopped
+    ports:
+      - "3000:3000"  #  localhost 
+    environment:
+      VITE_HASURA_ADMIN_SECRET: CitrineOS!
+      VITE_API_URL: http://localhost:8090/v1/graphql
+      VITE_WS_URL: ws://localhost:8090/v1/graphql
+      VITE_CITRINE_CORE_URL: http://localhost:8080
+      VITE_FILE_SERVER_URL: http://localhost:9000
+      VITE_ADMIN_EMAIL: admin@citrineos.com
+      VITE_ADMIN_PASSWORD: P@ssword@1
+    depends_on:
+      graphql-engine:
+        condition: service_healthy
+    networks:
+      - citrine-network
+
+# Networks
+networks:
+  citrine-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,0 +1,27 @@
+# Docker volumes data
+# Dockolumes data
+data/postgresql/
+data/rabbitmq/
+data/minio/
+
+# Node modules
+node_modules/
+citrineos-operator-ui/node_modules/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+.DS_Store
+
+# Build artifacts
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+
+# Environment (secrets)
+.env

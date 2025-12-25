@@ -1,0 +1,263 @@
+{
+  "env": "production",
+  "centralSystem": {
+    "host": "0.0.0.0",
+    "port": 8080
+  },
+  "modules": {
+    "certificates": {
+      "endpointPrefix": "/certificates",
+      "requests": [
+        "Get15118EVCertificate",
+        "GetCertificateStatus",
+        "SignCertificate"
+      ],
+      "responses": [
+        "CertificateSigned",
+        "DeleteCertificate",
+        "GetInstalledCertificateIds",
+        "InstallCertificate"
+      ]
+    },
+    "evdriver": {
+      "endpointPrefix": "/evdriver",
+      "requests": [
+        "Authorize",
+        "ReservationStatusUpdate"
+      ],
+      "responses": [
+        "CancelReservation",
+        "ClearCache",
+        "GetLocalListVersion",
+        "RequestStartTransaction",
+        "RequestStopTransaction",
+        "ReserveNow",
+        "SendLocalList",
+        "UnlockConnector",
+        "RemoteStopTransaction",
+        "RemoteStartTransaction"
+      ]
+    },
+    "configuration": {
+      "heartbeatInterval": 60,
+      "bootRetryInterval": 15,
+      "ocpp2_0_1": {
+        "unknownChargerStatus": "Accepted",
+        "getBaseReportOnPending": true,
+        "bootWithRejectedVariables": true,
+        "autoAccept": true
+      },
+      "ocpp1_6": {
+        "unknownChargerStatus": "Accepted"
+      },
+      "endpointPrefix": "/configuration",
+      "requests": [
+        "BootNotification",
+        "DataTransfer",
+        "FirmwareStatusNotification",
+        "Heartbeat",
+        "NotifyDisplayMessages",
+        "PublishFirmwareStatusNotification",
+        "Heartbeat",
+        "BootNotification"
+      ],
+      "responses": [
+        "ChangeAvailability",
+        "ClearDisplayMessage",
+        "GetDisplayMessages",
+        "PublishFirmware",
+        "Reset",
+        "SetDisplayMessage",
+        "SetNetworkProfile",
+        "TriggerMessage",
+        "UnpublishFirmware",
+        "UpdateFirmware",
+        "ChangeAvailability",
+        "ChangeConfiguration",
+        "GetConfiguration",
+        "Reset",
+        "TriggerMessage"
+      ]
+    },
+    "monitoring": {
+      "endpointPrefix": "/monitoring",
+      "requests": [
+        "NotifyEvent"
+      ],
+      "responses": [
+        "ClearVariableMonitoring",
+        "GetVariables",
+        "SetMonitoringBase",
+        "SetMonitoringLevel",
+        "GetMonitoringReport",
+        "SetVariableMonitoring",
+        "SetVariables"
+      ]
+    },
+    "reporting": {
+      "endpointPrefix": "/reporting",
+      "requests": [
+        "LogStatusNotification",
+        "NotifyCustomerInformation",
+        "NotifyReport",
+        "SecurityEventNotification",
+        "NotifyMonitoringReport"
+      ],
+      "responses": [
+        "CustomerInformation",
+        "GetLog",
+        "GetReport",
+        "GetBaseReport",
+        "GetMonitoringReport"
+      ]
+    },
+    "smartcharging": {
+      "endpointPrefix": "/smartcharging",
+      "requests": [
+        "ClearedChargingLimit",
+        "NotifyChargingLimit",
+        "NotifyEVChargingNeeds",
+        "NotifyEVChargingSchedule",
+        "ReportChargingProfiles"
+      ],
+      "responses": [
+        "ClearChargingProfile",
+        "GetChargingProfiles",
+        "GetCompositeSchedule",
+        "SetChargingProfile"
+      ]
+    },
+    "tenant": {
+      "endpointPrefix": "/tenant",
+      "requests": [],
+      "responses": []
+    },
+    "transactions": {
+      "endpointPrefix": "/transactions",
+      "costUpdatedInterval": 60,
+      "requests": [
+        "MeterValues",
+        "StatusNotification",
+        "TransactionEvent",
+        "MeterValues",
+        "StatusNotification",
+        "StartTransaction",
+        "StopTransaction"
+      ],
+      "responses": [
+        "CostUpdated",
+        "GetTransactionStatus"
+      ]
+    }
+  },
+  "util": {
+    "cache": {
+      "memory": true
+    },
+    "messageBroker": {
+      "amqp": {
+        "url": "amqp://guest:guest@amqp-broker:5672",
+        "exchange": "citrineos"
+      }
+    },
+    "authProvider": {
+      "localByPass": true
+    },
+    "swagger": {
+      "path": "/docs",
+      "logoPath": "/usr/local/apps/citrineos/Server/dist/assets/logo.png",
+      "exposeData": true,
+      "exposeMessage": true
+    },
+    "networkConnection": {
+      "websocketServers": [
+        {
+          "id": "0",
+          "host": "0.0.0.0",
+          "port": 8081,
+          "pingInterval": 60,
+          "protocol": "ocpp2.0.1",
+          "securityProfile": 0,
+          "allowUnknownChargingStations": true,
+          "tenantId": 1
+        },
+        {
+          "id": "1",
+          "host": "0.0.0.0",
+          "port": 8082,
+          "pingInterval": 60,
+          "protocol": "ocpp2.0.1",
+          "securityProfile": 1,
+          "allowUnknownChargingStations": false,
+          "tenantId": 1
+        },
+        {
+          "id": "2",
+          "host": "0.0.0.0",
+          "port": 8443,
+          "pingInterval": 60,
+          "protocol": "ocpp2.0.1",
+          "securityProfile": 2,
+          "allowUnknownChargingStations": false,
+          "tlsKeyFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/leafKey.pem",
+          "tlsCertificateChainFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/certChain.pem",
+          "rootCACertificateFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/rootCertificate.pem",
+          "tenantId": 1
+        },
+        {
+          "id": "3",
+          "host": "0.0.0.0",
+          "port": 8444,
+          "pingInterval": 60,
+          "protocol": "ocpp2.0.1",
+          "securityProfile": 3,
+          "allowUnknownChargingStations": false,
+          "tlsKeyFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/leafKey.pem",
+          "tlsCertificateChainFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/certChain.pem",
+          "mtlsCertificateAuthorityKeyFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/subCAKey.pem",
+          "rootCACertificateFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/rootCertificate.pem",
+          "tenantId": 1
+        },
+        {
+          "id": "4",
+          "host": "0.0.0.0",
+          "port": 8092,
+          "pingInterval": 60,
+          "protocol": "ocpp1.6",
+          "securityProfile": 0,
+          "allowUnknownChargingStations": true,
+          "tenantId": 1
+        }
+      ]
+    },
+    "certificateAuthority": {
+      "v2gCA": {
+        "name": "hubject",
+        "hubject": {
+          "baseUrl": "https://open.plugncharge-test.hubject.com",
+          "tokenUrl": "https://hubject.stoplight.io/api/v1/projects/cHJqOjk0NTg5/nodes/6bb8b3bc79c2e-authorization-token",
+          "isoVersion": "ISO15118-2"
+        }
+      },
+      "chargingStationCA": {
+        "name": "acme",
+        "acme": {
+          "env": "staging",
+          "accountKeyFilePath": "/usr/local/apps/citrineos/Server/dist/assets/certificates/acme_account_key.pem",
+          "email": "test@citrineos.com"
+        }
+      }
+    }
+  },
+  "logLevel": 2,
+  "maxCallLengthSeconds": 5,
+  "maxCachingSeconds": 10,
+  "maxReconnectDelay": 30,
+  "ocpiServer": {
+    "host": "0.0.0.0",
+    "port": 8085
+  },
+  "userPreferences": {
+    "telemetryConsent": false
+  }
+}
