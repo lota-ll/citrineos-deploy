@@ -1,27 +1,60 @@
-# Docker volumes data
-# Dockolumes data
+# ============================================================================
+# CitrineOS Deployment - Git Ignore
+# ============================================================================
+
+# Docker volumes data (не зберігаємо дані БД в git)
 data/postgresql/
 data/rabbitmq/
 data/minio/
 
+# Зберігаємо тільки config.json
+!data/config.json
+
 # Node modules
 node_modules/
-citrineos-operator-ui/node_modules/
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-.DS_Store
+**/node_modules/
 
 # Build artifacts
 dist/
 build/
+**/dist/
+**/build/
+
+# Logs
+*.log
+logs/
+
+# Environment files (містять секрети)
+.env
+citrineos-operator-ui/.env
+
+# Не ігноруємо приклад
+!.env.example
 
 # IDE
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 
-# Environment (secrets)
-.env
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Certificates (якщо є приватні ключі)
+*.pem
+*.key
+!**/assets/certificates/*.pem
+
+# Docker
+.docker/
+
+# Backup files
+*.bak
+*.backup
